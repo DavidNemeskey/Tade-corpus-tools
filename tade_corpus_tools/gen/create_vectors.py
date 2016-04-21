@@ -49,17 +49,9 @@ def parse_arguments():
     return args.tade_file, args.vector_file, args.long, args.cutoff
 
 
-def create_short_vectors(tade_file, vector_file, cutoff):
-    tade = Tade(tade_file)
-    verbs, args = [], set()
+def create_short_vectors(tade, vector_file):
     # First count the number of argument types
-    for verb, vo in tade.verb_index.iteritems():
-        if vo.freq >= cutoff:
-            verbs.append(verb)
-            for arg in vo.arg_index.iterkeys():
-                args.add(arg)
-    verbs = sorted(verbs)
-    args = {a: i for i, a in enumerate(sorted(args))}
+    verbs, args = _collect_verbs_and_frargs(tade, _get_args)
 
     # Now fill the vectors...
     try:
@@ -87,17 +79,9 @@ def create_short_vectors(tade_file, vector_file, cutoff):
     _write_results(verbs, args.keys(), vectors, vector_file, 'args')
 
 
-def create_long_vectors(tade_file, vector_file, cutoff):
-    tade = Tade(tade_file)
-    verbs, frames = [], set()
+def create_long_vectors(tade, vector_file):
     # First count the number of frame types
-    for verb, vo in tade.verb_index.iteritems():
-        if vo.freq >= cutoff:
-            verbs.append(verb)
-            for frame in vo.frames.iterkeys():
-                frames.add(frame)
-    verbs = sorted(verbs)
-    frames = {f: i for i, f in enumerate(sorted(frames))}
+    verbs, frames = _collect_verbs_and_frargs(tade, _get_frames)
 
     # Now fill the vectors...
     from scipy.sparse import dok_matrix
@@ -113,6 +97,24 @@ def create_long_vectors(tade_file, vector_file, cutoff):
                    vector_file, 'frames')
 
 
+def _collect_verbs_and_frargs(tade, selector):
+    """Collects either arguments or frames, depending on selector."""
+    verbs, frargs = [], set()
+    for vo in tade.verb_index.itervalues():
+        verbs.append(vo.verb)
+        for frarg in selector(vo):
+            frargs.add(frarg)
+    return sorted(verbs), {f: i for i, f in enumerate(sorted(frargs))}
+
+
+def _get_args(tade_verb):
+    return tade_verb.arg_index.iterkeys()
+
+
+def _get_frames(tade_verb):
+    return tade_verb.frames.iterkeys()
+
+
 def _write_results(verbs, columns, vectors, vector_file, columns_type):
     write_vectors(verbs, vectors, vector_file)
     with open(vector_file[:-3] + columns_type, 'w') as outf:
@@ -121,7 +123,8 @@ def _write_results(verbs, columns, vectors, vector_file, columns_type):
 
 if __name__ == '__main__':
     tade_file, vector_file, longv, cutoff = parse_arguments()
+    tade = Tade(tade_file, min_verb_freq=cutoff)
     if longv:
-        create_long_vectors(tade_file, vector_file, cutoff)
+        create_long_vectors(tade, vector_file)
     else:
-        create_short_vectors(tade_file, vector_file, cutoff)
+        create_short_vectors(tade, vector_file)

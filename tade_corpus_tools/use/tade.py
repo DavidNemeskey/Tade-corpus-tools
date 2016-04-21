@@ -68,6 +68,7 @@ class Tade():
                 for frame, (freq, ratio) in frames.iteritems():
                     self.arg_index[arg][frame][verb] = (freq, ratio)
                     self.frame_freqs[frame] += 1
+        print 'done'
 
 def most_freq_frames(tade, arg, n=10):
     return sorted(
