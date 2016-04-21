@@ -3,7 +3,8 @@ from collections import defaultdict
 
 
 class TadeVerb():
-    def __init__(self, frames, freq):
+    def __init__(self, verb, frames, freq):
+        self.verb = verb
         self.freq = freq
         self.frames = {}
         for frame_str, fr_freq, ratio in frames:
@@ -15,6 +16,10 @@ class TadeVerb():
         for frame, (freq, ratio) in self.frames.iteritems():
             for arg in frame:
                 self.arg_index[arg][frame] = (freq, ratio)
+
+    def __repr__(self):
+        return 'TadeVerb(verb: {}, freq: {}, #frames: {})'.format(
+            self.verb, self.freq, len(self.frames))
 
 
 def tade_iterator(tsv_file, min_verb_freq=1):
@@ -31,7 +36,7 @@ def tade_iterator(tsv_file, min_verb_freq=1):
                 if curr_verb is not None:
                     already_seen.add(curr_verb)
                     if curr_freq >= min_verb_freq:
-                        yield curr_verb, TadeVerb(curr_frames, curr_freq)
+                        yield TadeVerb(curr_verb, curr_frames, curr_freq)
                 curr_verb = verb
                 curr_freq = int(v_freq)
                 curr_frames = []
@@ -39,14 +44,14 @@ def tade_iterator(tsv_file, min_verb_freq=1):
             curr_frames.append((frame, int(fr_freq), float(ratio)))
         else:
             if curr_freq >= min_verb_freq:
-                yield curr_verb, TadeVerb(curr_frames, curr_freq)
+                yield TadeVerb(curr_verb, curr_frames, curr_freq)
 
 
 class Tade():
     def __init__(self, tsv_file, index=True, min_verb_freq=1):
         curr_verb, curr_freq, curr_frames = None, None, None
         print 'reading tade data...',
-        self.verb_index = {verb: tv for verb, tv in
+        self.verb_index = {tv.verb: tv for tv in
                            tade_iterator(tsv_file, min_verb_freq)}
         print 'done'
 
